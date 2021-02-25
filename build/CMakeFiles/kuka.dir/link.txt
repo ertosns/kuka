@@ -1,0 +1,2 @@
+/usr/bin/ar qc libkuka.a  CMakeFiles/kuka.dir/src/kuka.cpp.o CMakeFiles/kuka.dir/src/vehicle.cpp.o CMakeFiles/kuka.dir/src/utils.cpp.o
+/usr/bin/ranlib libkuka.a

@@ -1,0 +1,1 @@
+/usr/bin/c++    -rdynamic CMakeFiles/algebra_test.dir/tests/algebra_test.cpp.o  -o algebra_test  libalgebra.a -lgtest -lpthread 
