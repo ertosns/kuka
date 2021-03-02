@@ -1,8 +1,8 @@
 # kuka is open arm installed on omni-directional macanum wheeled vehicle
 
-    build on top of:
-        - [kinetics](https://github.com/ertosns/kinetics.git)
-        - [algebra](http://github.com/ertosns/algebra.git)
+# build on top of:
+- [kinetics](https://github.com/ertosns/kinetics.git)
+- [algebra](http://github.com/ertosns/algebra.git)
 
 
 # example
@@ -62,5 +62,5 @@
     kuka();
 ```
 
-# output
+#output
 ![alt text](https://github.com/ertosns/kuka/blob/main/data/ezgif.com-optimize.gif)
