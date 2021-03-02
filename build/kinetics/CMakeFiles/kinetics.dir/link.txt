@@ -1,2 +1,0 @@
-/usr/bin/ar qc libkinetics.a  CMakeFiles/kinetics.dir/src/kinetics.cpp.o CMakeFiles/kinetics.dir/src/kinematics.cpp.o CMakeFiles/kinetics.dir/src/trajectory.cpp.o
-/usr/bin/ranlib libkinetics.a

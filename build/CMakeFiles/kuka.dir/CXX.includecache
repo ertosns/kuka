@@ -6,6 +6,8 @@
 
 #IncludeRegexTransform: 
 
+/home/zerin/prj/kuka/src/kuka.cpp
+
 /home/zerin/prj/kuka/src/utils.cpp
 
 /home/zerin/prj/kuka/src/vehicle.cpp

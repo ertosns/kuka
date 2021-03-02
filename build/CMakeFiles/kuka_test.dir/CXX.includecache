@@ -6,6 +6,18 @@
 
 #IncludeRegexTransform: 
 
+/home/zerin/prj/kuka/include/controller.hpp
+Eigen/Dense
+-
+functional
+-
+algebra/algebra.hpp
+/home/zerin/prj/kuka/include/algebra/algebra.hpp
+../include/vehicle.hpp
+/home/zerin/prj/kuka/include/vehicle.hpp
+kinetics/logger.hpp
+/home/zerin/prj/kuka/include/kinetics/logger.hpp
+
 /home/zerin/prj/kuka/include/kuka.hpp
 iostream
 -
@@ -31,6 +43,8 @@ algebra/algebra.hpp
 /home/zerin/prj/kuka/include/utils.hpp
 ../include/mission_planner.hpp
 /home/zerin/prj/kuka/include/mission_planner.hpp
+../include/controller.hpp
+/home/zerin/prj/kuka/include/controller.hpp
 
 /home/zerin/prj/kuka/include/mission_planner.hpp
 Eigen/Dense
@@ -41,6 +55,8 @@ kinetics/trajectory.hpp
 /home/zerin/prj/kuka/include/kinetics/trajectory.hpp
 utils.hpp
 /home/zerin/prj/kuka/include/utils.hpp
+numeric
+-
 
 /home/zerin/prj/kuka/include/utils.hpp
 Eigen/Dense
@@ -61,6 +77,10 @@ kinetics/kinematics.hpp
 /home/zerin/prj/kuka/include/kinetics/kinematics.hpp
 cmath
 -
+../include/vehicle.hpp
+/home/zerin/prj/kuka/include/vehicle.hpp
+kinetics/logger.hpp
+/home/zerin/prj/kuka/include/kinetics/logger.hpp
 
 /home/zerin/prj/kuka/tests/kuka_test.cpp
 Eigen/Dense
@@ -69,10 +89,16 @@ vector
 -
 iostream
 -
+math.h
+/home/zerin/prj/kuka/tests/math.h
+cmath
+-
 gmock/gmock.h
 /home/zerin/prj/kuka/tests/gmock/gmock.h
 ../include/kuka.hpp
 /home/zerin/prj/kuka/include/kuka.hpp
+../include/controller.hpp
+/home/zerin/prj/kuka/include/controller.hpp
 
 /usr/include/eigen3/Eigen/Cholesky
 Core
