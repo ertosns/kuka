@@ -62,5 +62,6 @@
     kuka();
 ```
 
-#output
+# output
+
 ![alt text](https://github.com/ertosns/kuka/blob/main/data/ezgif.com-optimize.gif)
