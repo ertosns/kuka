@@ -12,11 +12,12 @@ using namespace std;
 
 TEST(KUKA, macanum_translation1) {
     //define state
-    State state(4, 5, 0.01);
+    const double dt = 0.01;
+    State state(4, 5, dt);
     Eigen::VectorXd configuration(12);
     configuration << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
     Eigen::VectorXd speed(9);
-    speed << 0, 0, 0, 0, 0, 10, 10, 10, 10;
+    speed << 10, 10, 10, 10, 0, 0, 0, 0, 0;
     state(configuration, speed);
     //define macanum
     const double l=0.235; // axial distance 2l=0.47
@@ -31,22 +32,24 @@ TEST(KUKA, macanum_translation1) {
     state.update_state(speed, macanum);
     // calculated  traveled distance
     auto chassis = state.get_chassis_state();
-    auto distance = sqrt(pow(chassis(1),2) +  pow(chassis(2),2));
+    auto distance = sqrt(pow(chassis(1),2)
+                         + pow(chassis(2),2));
     std::cout << "chassis state: " << chassis
               << "distance: " << distance
               << std::endl;
     ASSERT_TRUE(abs(distance-0.475) < 0.00001);
 }
-/*
+
 TEST(KUKA, macanum_translation2) {
     //Eigen::Vector4d u(-10,10,-10,10);
     //TODO test sidesways in y by 0.475
     //define state
-    State state(4, 5, 0.01);
+const double dt = 0.01;
+    State state(4, 5, dt);
     Eigen::VectorXd configuration(12);
     configuration << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
     Eigen::VectorXd speed(9);
-    speed << 0, 0, 0, 0, 0, -10, 10, -10, 10;
+    speed <<  -10, 10, -10, 10, 0, 0, 0, 0, 0;
     state(configuration, speed);
     //define macanum
     const double l=0.235; // axial distance 2l=0.47
@@ -76,7 +79,7 @@ TEST(KUKA, macanum_translation2_clipped) {
     Eigen::VectorXd configuration(12);
     configuration << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
     Eigen::VectorXd speed(9);
-    speed << 0, 0, 0, 0, 0, -10, 10, -10, 10;
+    speed <<  -10, 10, -10, 10, 0, 0, 0, 0, 0;
     state(configuration, speed);
     //define macanum
     const double l=0.235; // axial distance 2l=0.47
@@ -106,7 +109,7 @@ TEST(KUKA, macanum_rotation) {
     Eigen::VectorXd configuration(12);
     configuration << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
     Eigen::VectorXd speed(9);
-    speed << 0, 0, 0, 0, 0, -10, 10, 10, -10;
+    speed <<  -10, 10, 10, -10, 0, 0, 0, 0, 0;
     state(configuration, speed);
     //define macanum
     const double l=0.235; // axial distance 2l=0.47
@@ -181,7 +184,7 @@ TEST(KUKA, trajectoryGenerationScene8) {
     speed << 0, 0, 0, 0, 0,
         0, 0, 0, 0;
     state(configuration, speed);
-    auto Tse = state.Tse(kinematics);
+    auto Tse = state.Tse(kinematics, macanum);
     double intervals[] = {10, 2, 0.63, 2, 10, 2, 0.63, 2};
     PayloadMissionPlanner trajectory(Tse, intervals);
     trajectory(T_sc_initial, T_sc_d);
@@ -252,12 +255,12 @@ TEST(KUKA, Controller) {
     speed << 0, 0, 0, 0, 0,
         0, 0, 0, 0;
     state(configuration, speed);
-    auto Tse = state.Tse(kinematics);
+    auto Tse = state.Tse(kinematics, macanum);
     double intervals[] = {10, 2, 0.63, 2, 10, 2, 0.63, 2};
     PayloadMissionPlanner trajectory(Tse, intervals, dt);
     trajectory(T_sc_initial, T_sc_d);
     ERROR_DEF fn = &Controller::diff_trans;
-    PI_Controller controller(state, kinematics, fn, Kp, Ki, dt);
+    PI_Controller controller(state, kinematics, macanum, fn, Kp, Ki, dt);
     Kuka kuka(kinematics, macanum, trajectory, state, controller);
     // TEST
     //milestone3 output
@@ -287,7 +290,7 @@ TEST(KUKA, Controller) {
     std::cout << "_AdVd: " << _AdVd << std::endl
               << "AdVd: " << AdVd << std::endl;
     ASSERT_TRUE(_AdVd.isApprox(AdVd, 5));
-    Eigen::VectorXd Ve = controller(state, kinematics, AdVd, Xd);
+    Eigen::VectorXd Ve = controller(state, kinematics, macanum, AdVd, Xd);
     ASSERT_TRUE(Ve.isApprox(V));
     std::cout << "Ve: " << Ve << std::endl
               << "V: " << V << std::endl;
@@ -301,7 +304,7 @@ TEST(KUKA, Controller) {
               << "utheta: " << _utheta << std::endl;
     ASSERT_TRUE(udtheta.isApprox(_utheta,4));
 }
-*/
+
 TEST(KUKA, missionPlanning) {
     Eigen::Matrix4d Tb0;
     Tb0 << 1, 0, 0, 0.1662,
@@ -338,7 +341,8 @@ TEST(KUKA, missionPlanning) {
     Macanum macanum(Tb0, l, w, r);
     // simulation starts with initial block configuration at (x,y,theta) = (1,0,0)
     // final block configuration (0,-1,-pi/2)
-    State state(4, 5, dt);
+    double clip=10;
+    State state(4, 5, dt, clip);
     //TODO set the configuration precisely
     Eigen::VectorXd configuration(12);
     configuration << M_PI/4, -0.3, 0.2,
@@ -348,12 +352,11 @@ TEST(KUKA, missionPlanning) {
     speed << 0, 0, 0, 0, 0,
         0, 0 ,0 ,0;
     state(configuration, speed);
-    auto Tse = state.Tse(kinematics);
+    auto Tse = state.Tse(kinematics, macanum);
     double intervals[] = {10, 2, 0.63, 2, 10, 2, 0.63, 2};
     PayloadMissionPlanner trajectory(Tse, intervals);
     trajectory(T_sc_initial, T_sc_d);
-    PI_Controller controller(state, kinematics, Controller::diff_trans, 1, 1, dt);
-    //PI_Controller controller(state, kinematics, Controller::diff_trans, 0, 0, dt);
+    PI_Controller controller(state, kinematics, macanum, Controller::diff_trans, 5, 10, dt);
     Kuka kuka(kinematics, macanum, trajectory, state, controller);
     kuka();
 }

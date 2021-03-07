@@ -31,8 +31,8 @@ public:
     }
     */
     Vehicle(Eigen::MatrixXd F,
-            Eigen::MatrixXd Tb0) :
-        F(F), Tb0(Tb0) {
+            Eigen::MatrixXd _Tb0) :
+        F(F), Tb0(_Tb0) {
         assert(Tb0.size()>0);
     }
     Vehicle (const Vehicle &V) :
@@ -74,14 +74,17 @@ public:
      *
      * @return Jacobian
      */
-    Eigen::MatrixXd Jbase(Kinematics &kinematics, Eigen::VectorXd thetalist) {
+    Eigen::MatrixXd Jbase(Kinematics &kinematics,
+                          Eigen::VectorXd thetalist) {
         assert(Tb0.size()>0);
-        Eigen::MatrixXd Tbe = kinematics.ForwardKin(thetalist);
-        Eigen::MatrixXd T0e = Algebra::TransInv(Tb0)*Tbe;
+        Eigen::MatrixXd T0e = kinematics.ForwardKin(thetalist);
         Eigen::MatrixXd lie_adjoint_eb =
             Algebra::Adjoint(Algebra::TransInv(T0e)*
                              Algebra::TransInv(Tb0));
         return lie_adjoint_eb*F;
+    }
+    Eigen::MatrixXd get_Tb0() {
+        return Tb0;
     }
 protected:
     Eigen::MatrixXd Tb0;
@@ -175,7 +178,7 @@ public:
         nJ(narm_joints), nW(nwheels), dt(_dt), clip(_clip),
         state(Eigen::VectorXd::Zero(3+nW+nJ)),
         speed(Eigen::VectorXd::Zero(nW+nJ)),
-        log ("coppeliasim.csv" ){
+        log ("coppeliasim.csv" ) {
         //std::cout << "state constructed!" << std::endl;
     }
     State(const State &copy) : nJ(copy.nJ),
@@ -184,7 +187,7 @@ public:
                                speed(copy.speed),
                                dt(copy.dt),
                                clip(copy.clip),
-                               log(copy.log){
+                               log(copy.log) {
         //std::cout << "state copy constructed" << std::endl;
     }
     void operator() (Eigen::VectorXd _state,
@@ -217,10 +220,11 @@ public:
      * estimated from actuators sensors.
      *
      */
-    Eigen::MatrixXd Tse(Kinematics &kinematics) {
+    Eigen::MatrixXd Tse(Kinematics &kinematics, Vehicle &vehicle) {
         Eigen::VectorXd thetalist = get_arm_state();
-        Eigen::MatrixXd Tbe = kinematics.ForwardKin(thetalist);
-        return Tsb()*Tbe;
+        Eigen::MatrixXd T0e = kinematics.ForwardKin(thetalist);
+        Eigen::MatrixXd Tb0 = vehicle.get_Tb0();
+        return Tsb()*Tb0*T0e;
     }
     /////////////
     // chassis //
@@ -239,7 +243,7 @@ public:
     void set_arm_state(Eigen::VectorXd q_arm) {
         assert(q_arm.size()==nJ);
         //set arm joints 3,4 to limit 0.2 to avoid self-collision
-        /* //arm limits
+         //arm limits
         if (q_arm(2)>0.2)
             q_arm(2) = std::min(0.2, q_arm(2));
         else if (q_arm(2)<-0.2)
@@ -249,7 +253,7 @@ public:
             q_arm(3) = std::min(0.2, q_arm(3));
         else if (q_arm(3)<-0.2)
             q_arm(3) = std::max(-0.2, q_arm(3));
-        */
+
         modulas(q_arm);
         state.block(3,0,nJ,1) << q_arm;
     }
@@ -284,31 +288,39 @@ public:
     Eigen::VectorXd get_base_dstate() {
         return speed.block(nJ, 0, nW, 1);
     }
+    /*
+    Eigen::VectorXd get_delta_wheels() {
+        return dt*get_base_dstate();
+    }
+    */
     // state_space
     void update_state(Eigen::VectorXd U,
                       Vehicle &vehicle) {
-        //TODO (reversed?!)
-        //auto wheel_dstate = U.block(0,0,4,1);
-        //auto arm_dstate = U.block(4,0,5,1);
-        auto arm_dstate = U.block(0,0,5,1);
-        auto wheel_dstate = U.block(5,0,4,1);
-        //std::cout << "arm_dstate: " << arm_dstate << "wheel_dstate: " << wheel_dstate << std::endl;
-        set_arm_dstate(arm_dstate);
-        set_base_dstate(wheel_dstate);
-        // update arm configuration
-        Eigen::MatrixXd arm_next = get_arm_state() +
-            dt*get_arm_dstate();
+        auto wheel_speed = U.block(0,0,4,1);
+        auto arm_speed = U.block(4,0,5,1);
+        //  update speed
+        set_arm_dstate(arm_speed);
+        set_base_dstate(wheel_speed);
+        // set wheel, and call themback in order to get clipped!
+        wheel_speed=get_base_dstate();
+        arm_speed=get_arm_dstate();
+        auto arm_state = get_arm_state();
+        auto wheel_state = get_base_state();
+        //TODO (res) doesn't pass the test
+        auto wheel_delta = wheel_speed*dt;
+        auto arm_delta = arm_speed*dt;
+        //TODO (res) passes the test, although not correct!
+        //auto wheel_delta = wheel_speed;
+        //auto arm_delta = arm_speed;
+        // update robot configuration
+        Eigen::MatrixXd arm_next = arm_state + arm_delta;
+        Eigen::MatrixXd base_next = wheel_state + wheel_delta;
         set_arm_state(arm_next);
-        // update base configuration
-        Eigen::MatrixXd base_next = get_base_state() +
-            dt*get_base_dstate();
         set_base_state(base_next);
         // update chassis configuration
         Eigen::MatrixXd chassis = get_chassis_state();
         double phi = chassis(0);
-        Eigen::Vector4d du = get_base_dstate();
-        //Eigen::Vector4d du = dt*get_base_dstate();
-        //std::cout << "dt: " << dt << std::endl;
+        Eigen::VectorXd du = wheel_delta;
         Eigen::MatrixXd dq = vehicle.odometry(du, phi);
         Eigen::MatrixXd chassis_next = chassis + dq;
         //std::cout << "chassis: " << chassis << std::endl << "chassis_next: " << chassis_next << std::endl << "du: " << du << std::endl << "dq: " << dq << std::endl;
@@ -347,10 +359,14 @@ private:
     Logger log;
     static double trim(double v) {
         double CIRCLE = 2*3.14;
-        while (v >= CIRCLE)
-            v -= CIRCLE;
-        while (v <= -1*CIRCLE)
-            v += CIRCLE;
+        if (v >= CIRCLE) {
+            //v -= CIRCLE;
+            v =fmod(v,CIRCLE);
+        }
+        if (v <= -1*CIRCLE) {
+            //v += CIRCLE;
+            v = fmod(v,CIRCLE);
+        }
         return v;
     }
     /* Trim V values by 360 degree, V expected to be in radians

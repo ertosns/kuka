@@ -1,1 +1,1 @@
-/usr/bin/c++  -g  -rdynamic CMakeFiles/kuka_test.dir/tests/kuka_test.cpp.o  -o kuka_test  -lgtest -lpthread -lalgebra -lkinetics 
+/usr/bin/c++  -pg -g  -pg -rdynamic CMakeFiles/kuka_test.dir/tests/kuka_test.cpp.o  -o kuka_test  -lgtest -lpthread -lalgebra -lkinetics 

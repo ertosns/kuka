@@ -41,17 +41,17 @@ public:
         auto dt= trajectory.time_step();
         Xd = trajectory.get(0);
         for (int i=1; i<trajectory.size()-1; i++) {
-            X=state.Tse(kinematics);
-            Xd_next=trajectory.get(i);
+            X=state.Tse(kinematics, macanum);
+            Xd=trajectory.get(i);
+            Xd_next=trajectory.get(i+1);
             Vd = adj_feedforward(Xd, X, Xd_next);
-            Ve = controller(state, kinematics, Vd, Xd);
+            Ve = controller(state, kinematics, macanum, Vd, Xd);
             //update speed arm speed
             //TODO reverse Jeff to conside with the speed vector
             Eigen::VectorXd udtheta = Jeff_inv()*Ve;
             //update state
             state.update_state(udtheta, macanum);
             state.save_state(trajectory.gripper_state(i));
-            Xd = Xd_next;
         }
     }
     //TODO (adhock) for testing purpose.
@@ -72,7 +72,8 @@ public:
                                     Eigen::MatrixXd X,
                                     Eigen::MatrixXd Xd_next) {
         double dt_inv=1/trajectory.time_step();
-        Eigen::MatrixXd Vd = dt_inv*kinematics.diff(Xd,Xd_next);
+        Eigen::MatrixXd Vd = Algebra::se3ToVec(Algebra::MatrixLog6(Algebra::TransInv(Xd)*Xd_next)*dt_inv);
+        //Eigen::MatrixXd Vd = dt_inv*kinematics.diff(Xd,Xd_next);
         Eigen::MatrixXd diff=Algebra::TransInv(X)*Xd;
         Eigen::MatrixXd Adj = Algebra::Adjoint(diff);
         return Adj*Vd;

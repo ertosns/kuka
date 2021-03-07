@@ -23,15 +23,17 @@ public:
      */
     Controller(State state,
                Kinematics kinematics,
+               Vehicle vehicle,
                ERROR_DEF &fn,
-               double Kp=0, double Ki=0, double Kd=0, double dt=0.01) :
-        Kp(Kp), Ki(Ki), Kd(Kd), dt(dt),
-        log("controller.err"){
+               double Kp=0, double Ki=0, double Kd=0, double _dt=0.01) :
+        Kp(Kp), Ki(Ki), Kd(Kd), dt(_dt),
+        log("controller.err") {
         error_fn=fn;
-        Eigen::MatrixXd actual = state.Tse(kinematics);
+        Eigen::MatrixXd actual = state.Tse(kinematics, vehicle);
         Eigen::MatrixXd e = error_fn(actual, actual);
         //note! e is expected to be a vector, if it's not a vector then the following will fail! KP,KI,KD are square matrices, or the e nrows
-        int nrows = e.rows();
+        //int nrows = e.rows(); //TODO (res)
+        int nrows=6;
         KP = Kp*Eigen::MatrixXd::Identity(nrows, nrows);
         KI = Ki*Eigen::MatrixXd::Identity(nrows, nrows);
         KD = Ki*Eigen::MatrixXd::Identity(nrows, nrows);
@@ -49,23 +51,26 @@ public:
     virtual Eigen::MatrixXd
     operator() (State &state,
                 Kinematics &kinematics,
+                Vehicle &vehicle,
                 Eigen::MatrixXd feedforward,
                 Eigen::MatrixXd reference,
                 Eigen::MatrixXd dconfig=Eigen::MatrixXd::Zero(0,0)) {
-        Eigen::MatrixXd actual = state.Tse(kinematics);
+        Eigen::MatrixXd actual = state.Tse(kinematics, vehicle);
         Eigen::MatrixXd e = error_fn(actual, reference);
         log.write(e);
+        eint += e*dt;
         Eigen::MatrixXd d = Eigen::MatrixXd::Zero(e.rows(), e.cols());
+
         //TODO PID controller
         //if (Kd!=0 && dd.size()>0 && dconfig.size()>0)
         //d = error_fn(dd, dconfig);
         //KP * e + KI * (eint + e) + KD * d;
         //if e is vector then no difference between Ki, and KI!
-        Eigen::MatrixXd res = feedforward +
-            KP * e + KI * (eint + e) + KD * d;
+        //Eigen::MatrixXd res = feedforward + KP * e + KI * eint + KD * d;
+        Eigen::MatrixXd res = feedforward + Kp * e + Ki * eint;
         //TODO (res) should it be calculated over time?!
         // or we assume the resolution of integration is the same as that of the controller configuration estimation?!
-        eint += e*dt;
+
         return res;
     }
     static Eigen::MatrixXd diff_std (Eigen::MatrixXd Xd,
@@ -97,10 +102,12 @@ class P_Controller : public Controller {
 public:
     P_Controller(State state,
                  Kinematics kinematics,
+                 Vehicle vehicle,
                  ERROR_DEF fn,
                  double Kp=0, double dt=0.01)  :
         Controller(state,
                    kinematics,
+                   vehicle,
                    fn,
                    Kp, 0, 0, dt) {
         //
@@ -108,11 +115,13 @@ public:
     Eigen::MatrixXd
     operator()(State state,
                Kinematics kinematics,
+               Vehicle vehicle,
                Eigen::MatrixXd feedforward,
                Eigen::MatrixXd config) {
         //Controller::operator(..)
         return static_cast<Controller&>(*this)(state,
                                                kinematics,
+                                               vehicle,
                                                feedforward,
                                                config,
                                                Eigen::MatrixXd::Zero(0,0));
@@ -123,10 +132,12 @@ class PI_Controller : public Controller {
 public:
     PI_Controller(State state,
                   Kinematics kinematics,
+                  Vehicle vehicle,
                   ERROR_DEF fn,
                   double Kp=0, double Ki=0, double dt=0.01) :
         Controller(state,
                    kinematics,
+                   vehicle,
                    fn,
                    Kp, Ki, 0, dt) {
         //
@@ -134,10 +145,12 @@ public:
     Eigen::MatrixXd
     operator()(State state,
                Kinematics kinematics,
+               Vehicle vehicle,
                Eigen::MatrixXd feedforward,
                Eigen::MatrixXd config) {
         return static_cast<Controller&>(*this)(state,
                                                kinematics,
+                                               vehicle,
                                                feedforward,
                                                config,
                                                Eigen::MatrixXd::Zero(0,0));
