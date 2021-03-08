@@ -33,6 +33,7 @@ public:
         return trajectory.size();
     }
     void print(int idx) {
+        if (idx>=size()) return;
         Eigen::MatrixXd cur = get(idx);
         int s = grippers[idx]?1:0;
         std::cout << cur(0,0) <<  "," <<  cur(0,1) << ","
@@ -135,9 +136,21 @@ public:
         std::cout << "duration: " << Tf
                   << "dt: " << dt << std::endl;
         std::cout << "N: " << N << std::endl;
+        double alpha=M_PI/5;
         Trajectory  stand_off_traj(Tf, N);
-        auto T_ce_grasp=Eigen::Matrix4d::Identity();
-        auto T_ce_standoff=standoff(T_ce_grasp);
+        Eigen::MatrixXd T_ce_grasp(4,4);
+        T_ce_grasp << -1*sin(alpha), 0, cos(alpha), 0,
+            0, 1, 0, 0,
+            -1*cos(alpha), 0, -1*sin(alpha), 0,
+            0, 0, 0, 1;
+        //auto T_ce_grasp=Eigen::Matrix4d::Identity();
+        //auto T_ce_standoff=standoff(T_ce_grasp);
+
+        Eigen::MatrixXd T_ce_standoff(4,4);
+        T_ce_standoff << -1*sin(alpha), 0, cos(alpha), 0,
+            0,1,0,0,
+            -1*cos(alpha), 0, -1*sin(alpha), 0.25,
+            0,0,0,1;
         auto T_se_standoff = T_sc*T_ce_standoff;
         auto path = stand_off_traj.ScrewTrajectory(T_se, T_se_standoff);
         for (int i=0; i < path.size(); i++) {
@@ -177,8 +190,10 @@ public:
         Tf=duration[4];
         N = static_cast<int>(Tf*k/dt);
         Trajectory  totarget_standoff_traj(Tf, N);
-        auto T_se_d = T_sc_d;
-        auto T_se_d_standoff = standoff(T_se_d);
+        auto T_se_d = T_sc_d * T_ce_grasp;
+        //auto T_se_d = T_sc_d;
+        //auto T_se_d_standoff = standoff(T_se_d);
+        auto T_se_d_standoff = T_sc_d*T_ce_standoff;
         path = totarget_standoff_traj.ScrewTrajectory(T_se_standoff, T_se_d_standoff);
         for (int i=0; i < path.size(); i++) {
             trajectory.push_back(path[i]);

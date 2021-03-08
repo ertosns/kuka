@@ -70,6 +70,7 @@ const double dt = 0.01;
               << std::endl;
     ASSERT_TRUE(abs(distance-0.475) < 0.00001);
 }
+
 TEST(KUKA, macanum_translation2_clipped) {
     //Eigen::Vector4d u(-10,10,-10,10);
     //TODO test sidesways in y by 0.475
@@ -190,7 +191,7 @@ TEST(KUKA, trajectoryGenerationScene8) {
     trajectory(T_sc_initial, T_sc_d);
     std::cout << "trajectory size: "
               << trajectory.size() << std::endl;
-    //for (int i=0; trajectory.size(); i++) trajectory.print(i);
+    for (int i=0; i<trajectory.size(); i++) trajectory.print(i);
 }
 
 TEST(KUKA, Controller) {
@@ -305,6 +306,7 @@ TEST(KUKA, Controller) {
     ASSERT_TRUE(udtheta.isApprox(_utheta,4));
 }
 
+/*
 TEST(KUKA, missionPlanning) {
     Eigen::Matrix4d Tb0;
     Tb0 << 1, 0, 0, 0.1662,
@@ -352,7 +354,12 @@ TEST(KUKA, missionPlanning) {
     speed << 0, 0, 0, 0, 0,
         0, 0 ,0 ,0;
     state(configuration, speed);
-    auto Tse = state.Tse(kinematics, macanum);
+    //auto Tse = state.Tse(kinematics, macanum);
+    Eigen::MatrixXd Tse(4,4);
+    Tse << 0,0,1,0,
+        0,1,0,0,
+        -1,0,0,0.5,
+        0,0,0,1;
     double intervals[] = {10, 2, 0.63, 2, 10, 2, 0.63, 2};
     PayloadMissionPlanner trajectory(Tse, intervals);
     trajectory(T_sc_initial, T_sc_d);
@@ -360,7 +367,7 @@ TEST(KUKA, missionPlanning) {
     Kuka kuka(kinematics, macanum, trajectory, state, controller);
     kuka();
 }
-
+*/
 int main(int argc, char **args) {
     InitGoogleTest(&argc, args);
     return RUN_ALL_TESTS();
