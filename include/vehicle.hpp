@@ -50,7 +50,7 @@ public:
      */
     Eigen::MatrixXd odometry(Eigen::VectorXd du,
                              double phi) {
-        Eigen::VectorXd Vb =  F*du;
+        Eigen::VectorXd Vb = F*du;
         auto wz = Vb(2);
         auto vx = Vb(3);
         auto vy = Vb(4);
@@ -306,12 +306,9 @@ public:
         arm_speed=get_arm_dstate();
         auto arm_state = get_arm_state();
         auto wheel_state = get_base_state();
-        //TODO (res) doesn't pass the test
+        // delta state
         auto wheel_delta = wheel_speed*dt;
         auto arm_delta = arm_speed*dt;
-        //TODO (res) passes the test, although not correct!
-        //auto wheel_delta = wheel_speed;
-        //auto arm_delta = arm_speed;
         // update robot configuration
         Eigen::MatrixXd arm_next = arm_state + arm_delta;
         Eigen::MatrixXd base_next = wheel_state + wheel_delta;

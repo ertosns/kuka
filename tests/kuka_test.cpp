@@ -44,7 +44,7 @@ TEST(KUKA, macanum_translation2) {
     //Eigen::Vector4d u(-10,10,-10,10);
     //TODO test sidesways in y by 0.475
     //define state
-const double dt = 0.01;
+    const double dt = 0.01;
     State state(4, 5, dt);
     Eigen::VectorXd configuration(12);
     configuration << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
@@ -191,7 +191,7 @@ TEST(KUKA, trajectoryGenerationScene8) {
     trajectory(T_sc_initial, T_sc_d);
     std::cout << "trajectory size: "
               << trajectory.size() << std::endl;
-    for (int i=0; i<trajectory.size(); i++) trajectory.print(i);
+    //for (int i=0; i<trajectory.size(); i++) trajectory.print(i);
 }
 
 TEST(KUKA, Controller) {
@@ -261,7 +261,7 @@ TEST(KUKA, Controller) {
     PayloadMissionPlanner trajectory(Tse, intervals, dt);
     trajectory(T_sc_initial, T_sc_d);
     ERROR_DEF fn = &Controller::diff_trans;
-    PI_Controller controller(state, kinematics, macanum, fn, Kp, Ki, dt);
+    PI_Controller controller(state, fn, Kp, Ki, dt);
     Kuka kuka(kinematics, macanum, trajectory, state, controller);
     // TEST
     //milestone3 output
@@ -298,6 +298,7 @@ TEST(KUKA, Controller) {
     auto _Je = kuka.get_Je();
     std::cout << "Je: " << Je << std::endl
               << "_Je: " << _Je << std::endl;
+
     ASSERT_TRUE(_Je.isApprox(Je,4));
     //update speed arm speed
     Eigen::VectorXd udtheta = kuka.Jeff_inv()*Ve;
@@ -306,7 +307,6 @@ TEST(KUKA, Controller) {
     ASSERT_TRUE(udtheta.isApprox(_utheta,4));
 }
 
-/*
 TEST(KUKA, missionPlanning) {
     Eigen::Matrix4d Tb0;
     Tb0 << 1, 0, 0, 0.1662,
@@ -322,8 +322,8 @@ TEST(KUKA, missionPlanning) {
     Blist << 0,0,0,0,0,
         0,-1,-1,-1,0,
         1,0,0,0,1,
-        0,0,0,0,0,
-        0.033,-0.5076,-0.3526,-0.2176,0,
+        0,-0.5076,-0.3526,-0.2176,0,
+        0.033,0,0,0,0,
         0,0,0,0,0;
     Eigen::Matrix4d T_sc_initial;
     T_sc_initial << 1, 0, 0, 1,
@@ -343,8 +343,8 @@ TEST(KUKA, missionPlanning) {
     Macanum macanum(Tb0, l, w, r);
     // simulation starts with initial block configuration at (x,y,theta) = (1,0,0)
     // final block configuration (0,-1,-pi/2)
-    double clip=10;
-    State state(4, 5, dt, clip);
+    double speed_clip=10;
+    State state(4, 5, dt, speed_clip);
     //TODO set the configuration precisely
     Eigen::VectorXd configuration(12);
     configuration << M_PI/4, -0.3, 0.2,
@@ -360,14 +360,23 @@ TEST(KUKA, missionPlanning) {
         0,1,0,0,
         -1,0,0,0.5,
         0,0,0,1;
-    double intervals[] = {10, 2, 0.63, 2, 10, 2, 0.63, 2};
+    double intervals[] = {5, 1, 0.31, 1, 5, 1, 0.31, 1};
     PayloadMissionPlanner trajectory(Tse, intervals);
     trajectory(T_sc_initial, T_sc_d);
-    PI_Controller controller(state, kinematics, macanum, Controller::diff_trans, 5, 10, dt);
+
+    //chaotics! far from correct!
+    //PI_Controller controller(state, Controller::diff_trans, 5, 10, dt);
+    //much worse, it seams the error is in the proportional gain!
+    //PI_Controller controller(state, Controller::diff_trans, 5, 0, dt);
+    //even worse, but in goes in 90 degree phase!
+    //PI_Controller controller(state, Controller::diff_trans, 1, 1, dt);
+    //better than before
+    //PI_Controller controller(state, Controller::diff_trans, 1, 1, dt);
+    PI_Controller controller(state, Controller::diff_trans, 0.1, 0.01, dt);
     Kuka kuka(kinematics, macanum, trajectory, state, controller);
     kuka();
 }
-*/
+
 int main(int argc, char **args) {
     InitGoogleTest(&argc, args);
     return RUN_ALL_TESTS();

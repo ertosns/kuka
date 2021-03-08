@@ -45,6 +45,8 @@ public:
             Xd=trajectory.get(i);
             Xd_next=trajectory.get(i+1);
             Vd = adj_feedforward(Xd, X, Xd_next);
+            //Ve = Vd;
+            //TODO (fix) the controller oscillates, and multiply the error! first fix the twist error
             Ve = controller(state, kinematics, macanum, Vd, Xd);
             //update speed arm speed
             //TODO reverse Jeff to conside with the speed vector
@@ -61,6 +63,9 @@ public:
     MissionPlanner trajectory;
     State state;
     Controller controller;
+    /*feedforward without Adjoint, used for testing purpose
+     *
+     */
     Eigen::MatrixXd feedforward(Eigen::MatrixXd Xd,
                                 Eigen::MatrixXd Xd_next) {
         //Xd, and dXd_next, for this reason 1/dt
@@ -71,9 +76,10 @@ public:
     Eigen::MatrixXd adj_feedforward(Eigen::MatrixXd Xd,
                                     Eigen::MatrixXd X,
                                     Eigen::MatrixXd Xd_next) {
-        double dt_inv=1/trajectory.time_step();
-        Eigen::MatrixXd Vd = Algebra::se3ToVec(Algebra::MatrixLog6(Algebra::TransInv(Xd)*Xd_next)*dt_inv);
-        //Eigen::MatrixXd Vd = dt_inv*kinematics.diff(Xd,Xd_next);
+        double dt=trajectory.time_step();
+        //feedforward
+        Eigen::MatrixXd Vd = Algebra::se3ToVec(Algebra::MatrixLog6(Algebra::TransInv(Xd)*Xd_next)/dt);
+        //adjoint
         Eigen::MatrixXd diff=Algebra::TransInv(X)*Xd;
         Eigen::MatrixXd Adj = Algebra::Adjoint(diff);
         return Adj*Vd;

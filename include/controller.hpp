@@ -10,7 +10,6 @@ using namespace Eigen;
 
 #define ERROR_DEF function<MatrixXd(MatrixXd,MatrixXd)>
 
-//TODO add error visualizers
 class Controller {
 public:
     /* Controller Constructor
@@ -22,22 +21,17 @@ public:
      * @param Kd: derivative factor
      */
     Controller(State state,
-               Kinematics kinematics,
-               Vehicle vehicle,
                ERROR_DEF &fn,
                double Kp=0, double Ki=0, double Kd=0, double _dt=0.01) :
         Kp(Kp), Ki(Ki), Kd(Kd), dt(_dt),
         log("controller.err") {
         error_fn=fn;
-        Eigen::MatrixXd actual = state.Tse(kinematics, vehicle);
-        Eigen::MatrixXd e = error_fn(actual, actual);
-        //note! e is expected to be a vector, if it's not a vector then the following will fail! KP,KI,KD are square matrices, or the e nrows
-        //int nrows = e.rows(); //TODO (res)
+        Eigen::MatrixXd e = Eigen::VectorXd::Zero(6);
         int nrows=6;
         KP = Kp*Eigen::MatrixXd::Identity(nrows, nrows);
         KI = Ki*Eigen::MatrixXd::Identity(nrows, nrows);
         KD = Ki*Eigen::MatrixXd::Identity(nrows, nrows);
-        eint = e; //initialization of eint shape
+        eint = e;
         std::cout << "controller constructed!" << std::endl;
     }
     Controller(const Controller &copy)
@@ -52,35 +46,36 @@ public:
     operator() (State &state,
                 Kinematics &kinematics,
                 Vehicle &vehicle,
-                Eigen::MatrixXd feedforward,
+                Eigen::MatrixXd V_feedforward,
                 Eigen::MatrixXd reference,
                 Eigen::MatrixXd dconfig=Eigen::MatrixXd::Zero(0,0)) {
         Eigen::MatrixXd actual = state.Tse(kinematics, vehicle);
         Eigen::MatrixXd e = error_fn(actual, reference);
+        //  std::cout << "e: " << std::endl
+        //<< e << std::endl;
         log.write(e);
         eint += e*dt;
-        Eigen::MatrixXd d = Eigen::MatrixXd::Zero(e.rows(), e.cols());
-
+        //Eigen::MatrixXd d = Eigen::MatrixXd::Zero(e.rows(), e.cols());
         //TODO PID controller
         //if (Kd!=0 && dd.size()>0 && dconfig.size()>0)
-        //d = error_fn(dd, dconfig);
+        //  d = error_fn(dd, dconfig);
         //KP * e + KI * (eint + e) + KD * d;
         //if e is vector then no difference between Ki, and KI!
-        //Eigen::MatrixXd res = feedforward + KP * e + KI * eint + KD * d;
-        Eigen::MatrixXd res = feedforward + Kp * e + Ki * eint;
-        //TODO (res) should it be calculated over time?!
-        // or we assume the resolution of integration is the same as that of the controller configuration estimation?!
-
-        return res;
+        //Eigen::MatrixXd V = V_feedforward + KP * e + KI * eint + KD * d;
+        Eigen::MatrixXd V = V_feedforward +
+            KP * e +
+            KI * eint;
+        //+KD * d;
+        return V;
     }
-    static Eigen::MatrixXd diff_std (Eigen::MatrixXd Xd,
-                                     Eigen::MatrixXd X) {
+    static Eigen::MatrixXd diff_std (Eigen::MatrixXd X,
+                                     Eigen::MatrixXd Xd) {
         assert(Xd.cols()==X.cols());
         assert(Xd.rows()==X.rows());
         return Xd - X;
     };
-    static Eigen::MatrixXd diff_trans (Eigen::MatrixXd Xd,
-                                       Eigen::MatrixXd X) {
+    static Eigen::MatrixXd diff_trans (Eigen::MatrixXd X,
+                                       Eigen::MatrixXd Xd) {
         assert(Xd.cols()==X.cols() && X.size()==16);
         assert(Xd.rows()==X.rows() && Xd.size()==16);
         return Algebra::se3ToVec(Algebra::MatrixLog6(Algebra::TransInv(X)*Xd));
@@ -101,13 +96,9 @@ protected:
 class P_Controller : public Controller {
 public:
     P_Controller(State state,
-                 Kinematics kinematics,
-                 Vehicle vehicle,
                  ERROR_DEF fn,
                  double Kp=0, double dt=0.01)  :
         Controller(state,
-                   kinematics,
-                   vehicle,
                    fn,
                    Kp, 0, 0, dt) {
         //
@@ -118,7 +109,6 @@ public:
                Vehicle vehicle,
                Eigen::MatrixXd feedforward,
                Eigen::MatrixXd config) {
-        //Controller::operator(..)
         return static_cast<Controller&>(*this)(state,
                                                kinematics,
                                                vehicle,
@@ -131,16 +121,11 @@ public:
 class PI_Controller : public Controller {
 public:
     PI_Controller(State state,
-                  Kinematics kinematics,
-                  Vehicle vehicle,
                   ERROR_DEF fn,
                   double Kp=0, double Ki=0, double dt=0.01) :
         Controller(state,
-                   kinematics,
-                   vehicle,
                    fn,
                    Kp, Ki, 0, dt) {
-        //
     }
     Eigen::MatrixXd
     operator()(State state,
